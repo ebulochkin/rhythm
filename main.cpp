@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include <cmath>
 #include <string>
 
 #include "audio.h"
@@ -31,20 +32,21 @@ int main() {
       if (IsKeyPressed(KEY_SPACE)) audio.start();
     }
 
-    double songTime = audio.song_time();
+    double songTimeSec = audio.song_time();
+    double songBeat = chart.timing.beat_from_song_time(songTimeSec);
 
     if (audio.started) {
       audio.update();
 
       score.passive_decay(dt);
 
-      for (int lane = 0; lane < 4; lane++) {
+        for (int lane = 0; lane < 4; lane++) {
         if (IsKeyPressed(keys[lane])) {
-          try_hit_lane(chart, lane, songTime, win, score);
+          try_hit_lane(chart, lane, songBeat, win, score);
         }
       }
 
-      update_auto_miss(chart, songTime, win, score);
+      update_auto_miss(chart, songBeat, win, score);
       score.update_heat_level();
     }
 
@@ -67,12 +69,12 @@ int main() {
 
     DrawLine(laneStartX, hitLineY, laneStartX + 4 * laneW, hitLineY, GRAY);
 
-    double scroll = 320.0;
+    double scrollPxPerBeat = 96.0;
     for (auto &n : chart.notes) {
       if (n.hit || n.missed) continue;
 
-      double dtToHit = n.timeSec - songTime;
-      double y = hitLineY - dtToHit * scroll;
+      double beatToHit = n.beat - songBeat;
+      double y = hitLineY - beatToHit * scrollPxPerBeat;
 
       if (y < -50 || y > H + 50) continue;
 
@@ -95,7 +97,11 @@ int main() {
     DrawText(s4.c_str(), 20, 150, 20, RAYWHITE);
 
     if (audio.started) {
-      std::string st = "t=" + std::to_string(songTime);
+      int bar = chart.timing.bar_from_beat(songBeat) + 1;
+      int beatInBar = (int)std::floor(chart.timing.beat_in_bar(songBeat)) + 1;
+      std::string st = "t=" + std::to_string(songTimeSec) +
+                       "  beat=" + std::to_string(songBeat) +
+                       "  bar=" + std::to_string(bar) + ":" + std::to_string(beatInBar);
       DrawText(st.c_str(), 20, 180, 20, GRAY);
     }
 

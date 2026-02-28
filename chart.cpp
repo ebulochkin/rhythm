@@ -5,7 +5,7 @@
 
 void Chart::sort_notes() {
     std::sort(notes.begin(), notes.end(), [](const Note &a, const Note &b) {
-      if (a.timeSec != b.timeSec) return a.timeSec < b.timeSec;
+      if (a.beat != b.beat) return a.beat < b.beat;
       return a.lane < b.lane;
     });
 }
@@ -26,7 +26,7 @@ const char *judge_name(Judge j) {
     return "MISS";
 }
 
-bool try_hit_lane(Chart &chart, int lane, double songTimeSec,
+bool try_hit_lane(Chart &chart, int lane, double songBeat,
                   const HitWindows &w, ScoreState &score) {
     int idx = -1;
     for (int i = 0; i < (int)chart.notes.size(); i++) {
@@ -39,7 +39,8 @@ bool try_hit_lane(Chart &chart, int lane, double songTimeSec,
     if (idx == -1) return false;
 
     auto &n = chart.notes[idx];
-    double dt = songTimeSec - n.timeSec; // >0 поздно, <0 рано
+    double beatDt = songBeat - n.beat; // >0 поздно, <0 рано
+    double dt = beatDt * chart.timing.seconds_per_beat();
     double absDt = std::abs(dt);
 
     Judge j = judge_from_abs_dt(absDt, w);
@@ -53,11 +54,12 @@ bool try_hit_lane(Chart &chart, int lane, double songTimeSec,
     return true;
 }
 
-void update_auto_miss(Chart &chart, double songTimeSec,
+void update_auto_miss(Chart &chart, double songBeat,
                       const HitWindows &w, ScoreState &score) {
     for (auto &n : chart.notes) {
         if (n.hit || n.missed) continue;
-        if (songTimeSec - n.timeSec > w.bad) {
+        double dt = (songBeat - n.beat) * chart.timing.seconds_per_beat();
+        if (dt > w.bad) {
             n.missed = true;
             score.apply_miss_auto();
         }
@@ -66,10 +68,14 @@ void update_auto_miss(Chart &chart, double songTimeSec,
 
 Chart make_test_chart() {
     Chart chart;
-    double t = 1.0;
+    chart.timing.bpm = 128.0;
+    chart.timing.beatsPerBar = 4;
+    chart.timing.offsetSec = 0.0;
+
+    double beat = 4.0; // start from bar 2
     for (int i = 0; i < 64; i++) {
-        chart.notes.push_back({i % 4, t, false, false});
-        t += 0.35;
+        chart.notes.push_back({i % 4, beat, false, false});
+        beat += 1.0; // quarter notes
     }
     chart.sort_notes();
     return chart;

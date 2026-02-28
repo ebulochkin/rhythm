@@ -6,10 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(raylib REQUIRED)
 
-add_executable(rhythm main.cpp
+add_executable(
+        rhythm main.cpp
         chart.h
         chart.cpp
         audio.h
-        audio.cpp)
+        audio.cpp
+        )
 
 target_link_libraries(rhythm raylib)
